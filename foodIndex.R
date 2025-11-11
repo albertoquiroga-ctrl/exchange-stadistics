@@ -28,6 +28,7 @@ suppressPackageStartupMessages({
   library(readxl)
   library(writexl)
   library(dplyr)
+  library(tibble)
   library(tidyr)
   library(lubridate)
   library(stringr)
@@ -40,7 +41,7 @@ cfg <- list(
   out_dir     = "data",
   start_year  = 2010L,
   use_fao     = TRUE,
-  fred_key    = Sys.getenv("FRED_API_KEY", ""),
+  fred_key    = Sys.getenv("32a2f393619ea98accfcc46e875e706f ", ""),
   # FAO landing pages to try (FAO keeps changing paths/tails)
   fao_pages = c(
     "https://www.fao.org/worldfoodsituation/foodpricesindex/en/",
@@ -232,8 +233,181 @@ fetch_fao_ffpi <- function(url) {
   # Add metadata
   norm <- norm |>
     mutate(
-      unit        = "Index (2014–2016=100)",
-      base_period = "2014–2016",
-      source      = "FAO World Food Situation — Food Price Index",
+      unit        = "Index (2014-2016=100)",
+      base_period = "2014-2016",
+      source      = "FAO World Food Situation - Food Price Index",
       source_url  = url,
-      retrieved_utc = format(Sys.time()_
+      retrieved_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)
+    )
+
+  norm
+}
+
+# ----------------------------- FRED fallback -----------------------------
+
+fetch_fred_ffpi <- function(start_year = cfg$start_year, api_key = cfg$fred_key) {
+  message2("Fetching FRED fallback series: %s", cfg$fred_series)
+
+  params <- list(
+    series_id = cfg$fred_series,
+    file_type = "json",
+    observation_start = sprintf("%s-01-01", start_year)
+  )
+  if (nzchar(api_key)) {
+    params$api_key <- api_key
+  }
+
+  req <- request("https://api.stlouisfed.org/fred/series/observations")
+  req <- do.call(req_url_query, c(list(req), params))
+  resp <- req_perform(req)
+  if (resp_status(resp) < 200 || resp_status(resp) >= 300) {
+    stop("FRED request failed with status: ", resp_status(resp))
+  }
+
+  dat <- resp_body_json(resp, simplifyVector = TRUE)
+  obs <- dat$observations
+  if (is.null(obs) || !nrow(obs)) {
+    stop("FRED response did not include observations.")
+  }
+
+  tbl <- tibble::as_tibble(obs) |>
+    transmute(
+      date = as.Date(date),
+      ffpi_food = suppressWarnings(as.numeric(value))
+    ) |>
+    filter(!is.na(date), !is.na(ffpi_food)) |>
+    mutate(
+      ffpi_cereals = NA_real_,
+      ffpi_veg_oils = NA_real_,
+      ffpi_dairy = NA_real_,
+      ffpi_meat = NA_real_,
+      ffpi_sugar = NA_real_,
+      unit = "Index (2016=100)",
+      base_period = "2016",
+      source = "FRED (IMF Primary Commodity Prices, PFOODINDEXM)",
+      source_url = "https://fred.stlouisfed.org/series/PFOODINDEXM",
+      retrieved_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)
+    )
+
+  tbl
+}
+
+# ----------------------------- Outputs -----------------------------
+
+first_value <- function(x) {
+  x <- x[!is.na(x)]
+  if (!length(x)) return("")
+  as.character(x[1])
+}
+
+build_meta <- function(tbl, fallback_used) {
+  tibble(
+    field = c(
+      "rows",
+      "columns",
+      "unit",
+      "base_period",
+      "source",
+      "source_url",
+      "retrieved_utc",
+      "fallback_used",
+      "generated_utc",
+      "command"
+    ),
+    value = c(
+      as.character(nrow(tbl)),
+      paste(names(tbl), collapse = ", "),
+      first_value(tbl$unit),
+      first_value(tbl$base_period),
+      first_value(tbl$source),
+      first_value(tbl$source_url),
+      first_value(tbl$retrieved_utc),
+      if (isTRUE(fallback_used)) "TRUE" else "FALSE",
+      format(Sys.time(), tz = "UTC", usetz = TRUE),
+      "Rscript foodIndex.R"
+    )
+  )
+}
+
+write_outputs <- function(data_tbl, meta_tbl, out_dir = cfg$out_dir) {
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+  csv_path <- file.path(out_dir, "ffpi_monthly.csv")
+  readr::write_csv(data_tbl, csv_path)
+
+  xlsx_path <- file.path(out_dir, "ffpi_monthly.xlsx")
+  writexl::write_xlsx(list(data = data_tbl, meta = meta_tbl), xlsx_path)
+
+  readme_path <- file.path(out_dir, "ffpi_readme.txt")
+  fallback_flag <- meta_tbl$value[match("fallback_used", meta_tbl$field)]
+  if (length(fallback_flag) == 0 || is.na(fallback_flag)) {
+    fallback_flag <- "FALSE"
+  }
+  notes_line <- if (identical(fallback_flag, "TRUE")) {
+    "FRED fallback was used because the FAO route failed."
+  } else {
+    "FAO download succeeded."
+  }
+  summary_lines <- c(
+    sprintf("Food Price Index export generated on %s", format(Sys.time(), tz = "UTC", usetz = TRUE)),
+    sprintf("Primary source : %s", first_value(data_tbl$source)),
+    sprintf("Source URL     : %s", first_value(data_tbl$source_url)),
+    sprintf("Rows exported  : %s", nrow(data_tbl)),
+    sprintf("Fallback used  : %s", fallback_flag),
+    sprintf("Outputs        : %s, %s", basename(csv_path), basename(xlsx_path)),
+    "",
+    "Notes:",
+    notes_line
+  )
+  writeLines(summary_lines, con = readme_path)
+
+  invisible(list(csv = csv_path, xlsx = xlsx_path, readme = readme_path))
+}
+
+# ----------------------------- Main -----------------------------
+
+main <- function() {
+  start_cutoff <- as.Date(sprintf("%s-01-01", cfg$start_year))
+  data_tbl <- NULL
+  fallback_used <- FALSE
+
+  if (isTRUE(cfg$use_fao)) {
+    data_tbl <- tryCatch({
+      url <- discover_fao_resource()
+      fetch_fao_ffpi(url)
+    }, error = function(e) {
+      message2("FAO fetch failed: %s", conditionMessage(e))
+      NULL
+    })
+  }
+
+  if (is.null(data_tbl)) {
+    fallback_used <- TRUE
+    data_tbl <- fetch_fred_ffpi(start_year = cfg$start_year, api_key = cfg$fred_key)
+  }
+
+  if (!"date" %in% names(data_tbl)) {
+    stop("Resulting table is missing a 'date' column.")
+  }
+
+  data_tbl <- data_tbl |>
+    mutate(date = as.Date(date)) |>
+    arrange(date) |>
+    distinct(date, .keep_all = TRUE) |>
+    filter(date >= start_cutoff)
+
+  if (!nrow(data_tbl)) {
+    stop("No rows remaining after filtering by start_year.")
+  }
+
+  meta_tbl <- build_meta(data_tbl, fallback_used = fallback_used)
+  paths <- write_outputs(data_tbl, meta_tbl, out_dir = cfg$out_dir)
+
+  message2("Wrote %s", paths$csv)
+  message2("Wrote %s", paths$xlsx)
+  message2("Wrote %s", paths$readme)
+}
+
+if (identical(environment(), globalenv()) && !interactive()) {
+  main()
+}
