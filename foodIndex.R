@@ -41,14 +41,14 @@ cfg <- list(
   out_dir     = "data",
   start_year  = 2010L,
   use_fao     = TRUE,
-  fred_key    = Sys.getenv("32a2f393619ea98accfcc46e875e706f ", ""),
+  fred_key    = Sys.getenv("FRED_API_KEY", ""),
   # FAO landing pages to try (FAO keeps changing paths/tails)
   fao_pages = c(
     "https://www.fao.org/worldfoodsituation/foodpricesindex/en/",
     "https://www.fao.org/worldfoodsituation/foodpricesindex/",
     "https://www.fao.org/worldfoodsituation/foodpricesindex"
   ),
-  # Regex to find a current file with indices (CSV/XLS/XLSX)
+  # Regex to find a current file with indices (CSV/XLS/XLSX). Applied to URLs without query strings/fragments.
   fao_regex   = "(?i)(food[ _-]?price[ _-]?indices|FFPI).*\\.(csv|xlsx?)$",
   # FRED endpoint for IMF global food index (monthly, 2016=100)
   fred_series = "PFOODINDEXM"
@@ -89,8 +89,34 @@ absolute_url <- function(href, base) {
 
 # Parse a wide FAO table into standard schema
 normalize_fao_table <- function(tbl_raw) {
-  # Clean names, try to find a date-like column
-  df <- janitor::clean_names(tbl_raw)
+  df <- tibble::as_tibble(tbl_raw)
+
+  # If the first few rows contain metadata and the real headers live inside the table,
+  # promote the first row that has a "Date" label to be the header.
+  has_date_col <- function(nms) any(grepl("date", nms, ignore.case = TRUE))
+  if (!has_date_col(names(df))) {
+    header_idx <- which(apply(df, 1, function(row) any(grepl("^date$", trimws(tolower(as.character(row)))))))
+    if (length(header_idx)) {
+      header_row <- header_idx[1]
+      new_names <- as.character(df[header_row, ])
+      default_names <- sprintf("col_%02d", seq_along(new_names))
+      new_names[!nzchar(new_names)] <- default_names[!nzchar(new_names)]
+      new_names[is.na(new_names)] <- default_names[is.na(new_names)]
+      df <- df[-seq_len(header_row), , drop = FALSE]
+      names(df) <- make.unique(new_names, sep = "_")
+    }
+  }
+  df <- tibble::as_tibble(df)
+  names(df) <- make.unique(names(df), sep = "_")
+
+  df <- df |>
+    mutate(across(where(is.character), ~na_if(trimws(.), "")))
+
+  df <- janitor::clean_names(df)
+
+  df <- df |>
+    mutate(across(where(is.character), ~na_if(trimws(.), ""))) |>
+    filter(if_any(everything(), ~!is.na(.)))
 
   # Candidate date col names
   date_candidates <- c("date", "month", "period", "time", "reference_month", "year_month")
@@ -109,9 +135,9 @@ normalize_fao_table <- function(tbl_raw) {
     if (length(idx)) nm[idx[1]] else NA_character_
   }
 
-  col_food      <- match_col(c("^food$", "food price index", "fao food", "^ffpi$"))
+  col_food      <- match_col(c("^food$", "food[ _-]?price[ _-]?index", "fao food", "^ffpi$", "fao_food_price_index"))
   col_cereals   <- match_col(c("cereal"))
-  col_veg_oils  <- match_col(c("vegetable", "veg[ ._-]?oil"))
+  col_veg_oils  <- match_col(c("vegetable", "veg[ ._-]?oil", "\\boils?\\b"))
   col_dairy     <- match_col(c("dairy"))
   col_meat      <- match_col(c("meat"))
   col_sugar     <- match_col(c("sugar"))
@@ -147,18 +173,19 @@ normalize_fao_table <- function(tbl_raw) {
 
   add_if <- function(df_out, src, name) {
     if (!is.na(src) && src %in% names(df)) {
-      df_out[[name]] <<- num(df[[src]])
+      df_out[[name]] <- num(df[[src]])
     } else {
-      df_out[[name]] <<- NA_real_
+      df_out[[name]] <- NA_real_
     }
+    df_out
   }
 
-  add_if(out, col_food,     "ffpi_food")
-  add_if(out, col_cereals,  "ffpi_cereals")
-  add_if(out, col_veg_oils, "ffpi_veg_oils")
-  add_if(out, col_dairy,    "ffpi_dairy")
-  add_if(out, col_meat,     "ffpi_meat")
-  add_if(out, col_sugar,    "ffpi_sugar")
+  out <- add_if(out, col_food,     "ffpi_food")
+  out <- add_if(out, col_cereals,  "ffpi_cereals")
+  out <- add_if(out, col_veg_oils, "ffpi_veg_oils")
+  out <- add_if(out, col_dairy,    "ffpi_dairy")
+  out <- add_if(out, col_meat,     "ffpi_meat")
+  out <- add_if(out, col_sugar,    "ffpi_sugar")
 
   out <- out |>
     arrange(date) |>
@@ -175,24 +202,37 @@ discover_fao_resource <- function() {
     html <- tryCatch(get_html_safely(pg), error = function(e) NULL)
     if (is.null(html)) next
 
-    links <- html |>
+    links_raw <- html |>
       html_elements("a[href]") |>
       html_attr("href") |>
       unique()
 
-    # Filter by regex
-    hits <- links[grepl(cfg$fao_regex, links, perl = TRUE)]
+    links_raw <- links_raw[!is.na(links_raw) & nzchar(links_raw)]
+
+    if (!length(links_raw)) next
+
+    links_clean <- sub("[?#].*$", "", links_raw, perl = TRUE)
+
+    # Filter by regex on cleaned URL, but keep original so query params remain available for download
+    hits <- links_raw[grepl(cfg$fao_regex, links_clean, perl = TRUE)]
     hits_abs <- vapply(hits, absolute_url, FUN.VALUE = character(1), base = pg)
-    hits_abs <- unique(na.omit(hits_abs))
+    hits_abs <- unique(hits_abs[!is.na(hits_abs)])
 
     if (length(hits_abs)) {
+      hits_abs_clean <- sub("[?#].*$", "", hits_abs, perl = TRUE)
+      hits_df <- tibble::tibble(original = hits_abs, clean = hits_abs_clean)
+
       # Heuristic: prefer xlsx over csv, and the one with latest-looking name
       xlsx_first <- c(
-        hits_abs[grepl("\\.xlsx?$", hits_abs, ignore.case = TRUE)],
-        hits_abs[grepl("\\.csv$", hits_abs, ignore.case = TRUE)]
+        hits_df$original[grepl("\\.xlsx?$", hits_df$clean, ignore.case = TRUE)],
+        hits_df$original[grepl("\\.csv$", hits_df$clean, ignore.case = TRUE)]
       )
-      # choose the longest or most "recent-looking"
-      chosen <- xlsx_first[order(nchar(xlsx_first), decreasing = TRUE)][1]
+
+      if (!length(xlsx_first)) next
+
+      # choose the longest or most "recent-looking" (based on clean path without query string)
+      rank_idx <- order(nchar(sub("[?#].*$", "", xlsx_first, perl = TRUE)), decreasing = TRUE)
+      chosen <- xlsx_first[rank_idx][1]
       message2("Found FAO resource: %s", chosen)
       return(chosen)
     }
@@ -248,34 +288,75 @@ fetch_fao_ffpi <- function(url) {
 fetch_fred_ffpi <- function(start_year = cfg$start_year, api_key = cfg$fred_key) {
   message2("Fetching FRED fallback series: %s", cfg$fred_series)
 
-  params <- list(
-    series_id = cfg$fred_series,
-    file_type = "json",
-    observation_start = sprintf("%s-01-01", start_year)
-  )
+  start_cutoff <- as.Date(sprintf("%s-01-01", start_year))
+
+  fetch_via_api <- function() {
+    params <- list(
+      series_id = cfg$fred_series,
+      file_type = "json",
+      observation_start = sprintf("%s-01-01", start_year)
+    )
+    if (nzchar(api_key)) {
+      params$api_key <- api_key
+    } else {
+      return(NULL)
+    }
+
+    req <- request("https://api.stlouisfed.org/fred/series/observations")
+    req <- do.call(req_url_query, c(list(req), params))
+    resp <- req_perform(req)
+    if (resp_status(resp) < 200 || resp_status(resp) >= 300) {
+      stop("FRED request failed with status: ", resp_status(resp))
+    }
+
+    dat <- resp_body_json(resp, simplifyVector = TRUE)
+    obs <- dat$observations
+    if (is.null(obs) || !nrow(obs)) {
+      stop("FRED response did not include observations.")
+    }
+
+    tibble::as_tibble(obs) |>
+      transmute(
+        date = as.Date(date),
+        ffpi_food = suppressWarnings(as.numeric(value))
+      )
+  }
+
+  fetch_via_csv <- function() {
+    csv_url <- sprintf("https://fred.stlouisfed.org/graph/fredgraph.csv?id=%s", cfg$fred_series)
+    dat <- readr::read_csv(
+      csv_url,
+      show_col_types = FALSE,
+      progress = FALSE
+    )
+
+    tibble(
+      date = as.Date(dat$DATE),
+      ffpi_food = suppressWarnings(as.numeric(dat[[cfg$fred_series]]))
+    )
+  }
+
+  tbl <- NULL
+
   if (nzchar(api_key)) {
-    params$api_key <- api_key
+    tbl <- tryCatch(
+      fetch_via_api(),
+      error = function(e) {
+        message2("FRED API request failed (%s); falling back to CSV download.", conditionMessage(e))
+        NULL
+      }
+    )
   }
 
-  req <- request("https://api.stlouisfed.org/fred/series/observations")
-  req <- do.call(req_url_query, c(list(req), params))
-  resp <- req_perform(req)
-  if (resp_status(resp) < 200 || resp_status(resp) >= 300) {
-    stop("FRED request failed with status: ", resp_status(resp))
+  if (is.null(tbl)) {
+    tbl <- tryCatch(
+      fetch_via_csv(),
+      error = function(e) stop("Failed to download FRED CSV fallback: ", conditionMessage(e))
+    )
   }
 
-  dat <- resp_body_json(resp, simplifyVector = TRUE)
-  obs <- dat$observations
-  if (is.null(obs) || !nrow(obs)) {
-    stop("FRED response did not include observations.")
-  }
-
-  tbl <- tibble::as_tibble(obs) |>
-    transmute(
-      date = as.Date(date),
-      ffpi_food = suppressWarnings(as.numeric(value))
-    ) |>
-    filter(!is.na(date), !is.na(ffpi_food)) |>
+  tbl |>
+    filter(!is.na(date), !is.na(ffpi_food), date >= start_cutoff) |>
     mutate(
       ffpi_cereals = NA_real_,
       ffpi_veg_oils = NA_real_,
@@ -288,8 +369,6 @@ fetch_fred_ffpi <- function(start_year = cfg$start_year, api_key = cfg$fred_key)
       source_url = "https://fred.stlouisfed.org/series/PFOODINDEXM",
       retrieved_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)
     )
-
-  tbl
 }
 
 # ----------------------------- Outputs -----------------------------
