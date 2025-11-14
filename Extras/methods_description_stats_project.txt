@@ -1,0 +1,57 @@
+Data and Methods – Food Prices & Global Drivers Project
+(Plain text fallback because python-docx is not available in this environment.)
+
+You can paste this into a Word document and save it as .docx.
+
+1. Research question
+Our project focuses on the association between global food prices and a set of macro and
+environmental drivers. A concise working question is:
+"How are movements in the FAO Food Price Index associated with energy prices, freight/shipping
+costs, global temperature anomalies, and the HKD/USD exchange rate at the monthly frequency?"
+
+2. Data overview
+Type of data: Multivariate monthly time series.
+Planned sample: From 2010 onwards, restricted to the maximum common period across all series.
+Unit of observation: Calendar month (single global aggregate for each variable).
+
+Key variables:
+- FAO Food Price Index (headline food index and sub-indices for cereals, vegetable oils, dairy, meat, sugar).
+- Global energy price index.
+- Global freight/shipping cost index.
+- NOAA global surface temperature anomaly series.
+- HKD/USD nominal exchange rate.
+
+3. Data sources and collection process
+3.1 FAO Food Price Index
+The FAO Food Price Index (FFPI) is downloaded using the provided Python utility food_index.py, which
+automatically discovers the most recent FAO FFPI file, downloads it, and normalizes the table into a
+clean monthly time series. The script outputs ffpi_monthly.csv and ffpi_monthly.xlsx with columns
+for the headline food index (ffpi_food) and sub-indices (ffpi_cereals, ffpi_veg_oils, ffpi_dairy,
+ffpi_meat, ffpi_sugar), plus metadata on units, base period, and source.
+
+3.2 Other drivers (energy, freight, temperature, FX)
+Each teammate is responsible for one driver series. For each series, the responsible member must:
+1) Obtain an official monthly series from a reputable provider.
+2) Document the exact definition, units, base year (if an index), and original download link.
+3) Export the data as a clean CSV/Excel file with one row per month and a consistent date column.
+4) Record all details in the shared variable dictionary file.
+
+4. Data cleaning and construction of the final dataset
+Steps:
+1) Convert all series to a common monthly date variable (YYYY-MM-01) and check for duplicate or missing months.
+2) Inspect each raw series for obvious data entry errors, structural breaks, or extreme outliers.
+3) If a series is higher frequency, aggregate to monthly averages or end-of-month values.
+4) Align start/end dates across all series and restrict the sample to the overlapping period.
+5) Optionally construct transformed variables (logs, monthly/annual percentage changes).
+6) Merge the series into a single wide-format dataset using the date variable as key.
+
+5. Planned statistical use
+The focus of this course project is data collection and construction of a clean dataset suitable for
+later econometric analysis (regression of quantitative variables). We design the data so that subsequent
+work can fit simple and multiple regression models relating food prices to the selected drivers and test
+for associations between quantitative variables.
+
+6. Limitations and data quality checks
+We may face differences in base years and units across indices, data revisions, and incomplete coverage
+for some indicators. We mitigate these issues by relying on official sources, documenting every
+transformation in the dictionary, and keeping a reproducible record of scripts/raw downloads.
