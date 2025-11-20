@@ -1,0 +1,10 @@
+regime,mean,median,n_valid,n_missing,insight_id,kpi
+2018-2019,95.33,95.0,24,0,CI1,ffpi_food
+2020-2022,122.77,126.7,36,0,CI1,ffpi_food
+2023-2025,124.54,124.65,34,1,CI1,ffpi_food
+2018-2019,85.5,83.24,24,0,CI2,ffpi_veg_oils
+2020-2022,150.69,155.1,36,0,CI2,ffpi_veg_oils
+2023-2025,140.66,135.45,34,1,CI2,ffpi_veg_oils
+2018-2019,87.76,87.7,24,0,CI3,ipi_food
+2020-2022,92.41,91.25,36,0,CI3,ipi_food
+2023-2025,100.02,99.9,33,2,CI3,ipi_food

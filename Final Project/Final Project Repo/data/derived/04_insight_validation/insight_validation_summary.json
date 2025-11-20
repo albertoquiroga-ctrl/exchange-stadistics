@@ -1,0 +1,158 @@
+{
+  "source_data": "clean/data_clean.csv",
+  "export_dir": "derived/04_insight_validation",
+  "regime_windows": [
+    {
+      "regime": "2018-2019",
+      "start_date": "2018-01-01",
+      "end_date": "2019-12-01",
+      "rows": 24
+    },
+    {
+      "regime": "2020-2022",
+      "start_date": "2020-01-01",
+      "end_date": "2022-12-01",
+      "rows": 36
+    },
+    {
+      "regime": "2023-2025",
+      "start_date": "2023-01-01",
+      "end_date": "2025-11-01",
+      "rows": 35
+    }
+  ],
+  "insights": [
+    {
+      "id": "CI1",
+      "title": "FFPI food level remains about 30 points higher after 2019",
+      "kpi": "ffpi_food",
+      "relevance_score": 5,
+      "figure": "derived/04_insight_validation/figures/ci1_ffpi_food.png",
+      "regime_stats": [
+        {
+          "regime": "2018-2019",
+          "mean": 95.33,
+          "median": 95.0,
+          "n_valid": 24,
+          "n_missing": 0
+        },
+        {
+          "regime": "2020-2022",
+          "mean": 122.77,
+          "median": 126.7,
+          "n_valid": 36,
+          "n_missing": 0
+        },
+        {
+          "regime": "2023-2025",
+          "mean": 124.54,
+          "median": 124.65,
+          "n_valid": 34,
+          "n_missing": 1
+        }
+      ],
+      "pair_deltas": [
+        {
+          "base_regime": "2018-2019",
+          "compare_regime": "2020-2022",
+          "delta_mean": 27.44,
+          "ratio_mean": 1.29
+        },
+        {
+          "base_regime": "2018-2019",
+          "compare_regime": "2023-2025",
+          "delta_mean": 29.21,
+          "ratio_mean": 1.31
+        }
+      ]
+    },
+    {
+      "id": "CI2",
+      "title": "Veg oils index surged during the 2020-2022 stress window",
+      "kpi": "ffpi_veg_oils",
+      "relevance_score": 5,
+      "figure": "derived/04_insight_validation/figures/ci2_ffpi_veg_oils.png",
+      "regime_stats": [
+        {
+          "regime": "2018-2019",
+          "mean": 85.5,
+          "median": 83.24,
+          "n_valid": 24,
+          "n_missing": 0
+        },
+        {
+          "regime": "2020-2022",
+          "mean": 150.69,
+          "median": 155.1,
+          "n_valid": 36,
+          "n_missing": 0
+        },
+        {
+          "regime": "2023-2025",
+          "mean": 140.66,
+          "median": 135.45,
+          "n_valid": 34,
+          "n_missing": 1
+        }
+      ],
+      "pair_deltas": [
+        {
+          "base_regime": "2018-2019",
+          "compare_regime": "2020-2022",
+          "delta_mean": 65.19,
+          "ratio_mean": 1.76
+        },
+        {
+          "base_regime": "2018-2019",
+          "compare_regime": "2023-2025",
+          "delta_mean": 55.16,
+          "ratio_mean": 1.65
+        }
+      ]
+    },
+    {
+      "id": "CI3",
+      "title": "Import price pressure (IPI food) stayed elevated through 2025",
+      "kpi": "ipi_food",
+      "relevance_score": 4,
+      "figure": "derived/04_insight_validation/figures/ci3_ipi_food.png",
+      "regime_stats": [
+        {
+          "regime": "2018-2019",
+          "mean": 87.76,
+          "median": 87.7,
+          "n_valid": 24,
+          "n_missing": 0
+        },
+        {
+          "regime": "2020-2022",
+          "mean": 92.41,
+          "median": 91.25,
+          "n_valid": 36,
+          "n_missing": 0
+        },
+        {
+          "regime": "2023-2025",
+          "mean": 100.02,
+          "median": 99.9,
+          "n_valid": 33,
+          "n_missing": 2
+        }
+      ],
+      "pair_deltas": [
+        {
+          "base_regime": "2018-2019",
+          "compare_regime": "2023-2025",
+          "delta_mean": 12.26,
+          "ratio_mean": 1.14
+        },
+        {
+          "base_regime": "2020-2022",
+          "compare_regime": "2023-2025",
+          "delta_mean": 7.61,
+          "ratio_mean": 1.08
+        }
+      ]
+    }
+  ]
+}
