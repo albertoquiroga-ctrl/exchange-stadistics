@@ -230,12 +230,22 @@ df.head()
 # Figure export helper (PNG)
 import sys, subprocess
 from pathlib import Path
+import plotly.io as pio
 
-# Ensure kaleido is present for plotly static image export
-try:
-    import kaleido  # noqa: F401
-except ModuleNotFoundError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "kaleido"])
+
+def ensure_kaleido():
+    try:
+        import kaleido  # noqa: F401
+        return True
+    except Exception:
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "kaleido"])
+            import kaleido  # noqa: F401
+            return True
+        except Exception as exc:
+            print(f"Could not ensure kaleido: {exc}")
+            return False
+
 
 export_base_candidates = [
     Path.cwd() / "docs" / "derived",
@@ -256,9 +266,13 @@ fig_dir.mkdir(exist_ok=True)
 
 def save_fig(fig_obj, filename):
     path = fig_dir / filename
+    ensured = ensure_kaleido()
     try:
-        if hasattr(fig_obj, "write_image"):
-            fig_obj.write_image(path, engine="kaleido")
+        if hasattr(fig_obj, "write_image") and ensured:
+            fig_obj.write_image(path, format="png")
+        elif hasattr(fig_obj, "write_image") and not ensured:
+            img_bytes = pio.to_image(fig_obj, format="png")
+            path.write_bytes(img_bytes)
         elif hasattr(fig_obj, "savefig"):
             fig_obj.savefig(path, dpi=150, bbox_inches="tight")
         else:
@@ -266,6 +280,12 @@ def save_fig(fig_obj, filename):
         print(f"Saved figure to {path}")
     except Exception as exc:
         print(f"Could not save {filename}: {exc}")
+        try:
+            html_fallback = path.with_suffix(".html")
+            fig_obj.write_html(html_fallback, include_plotlyjs="cdn")
+            print(f"Wrote HTML fallback to {html_fallback}")
+        except Exception as exc2:
+            print(f"Fallback HTML failed: {exc2}")
     return path
 ```
 
