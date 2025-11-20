@@ -6,7 +6,7 @@ Baseline exploratory data analysis aligned with the business brief (food price m
 # Ensure plotting deps are available in the current kernel
 import sys, subprocess
 
-for _pkg in ("matplotlib", "seaborn", "plotly"):
+for _pkg in ("matplotlib", "seaborn", "plotly", "kaleido"):
     try:
         __import__(_pkg)
     except ModuleNotFoundError:
@@ -227,6 +227,40 @@ df.head()
 
 
 ```python
+# Figure export helper (PNG)
+export_base_candidates = [
+    Path.cwd() / "docs" / "derived",
+    Path.cwd().parent / "docs" / "derived",
+    Path.cwd().parent.parent / "docs" / "derived",
+    Path.cwd() / "Final Project Repo" / "docs" / "derived",
+    Path.cwd() / "Final Project" / "Final Project Repo" / "docs" / "derived",
+    Path.cwd().parent / "Final Project Repo" / "docs" / "derived",
+]
+export_dir = next((p for p in export_base_candidates if p.exists()), None)
+if export_dir is None:
+    export_dir = export_base_candidates[0]
+export_dir.mkdir(parents=True, exist_ok=True)
+
+fig_dir = export_dir / "02_baseline_eda_figures"
+fig_dir.mkdir(exist_ok=True)
+
+
+def save_fig(fig_obj, filename):
+    path = fig_dir / filename
+    try:
+        if hasattr(fig_obj, "write_image"):
+            fig_obj.write_image(path)
+        elif hasattr(fig_obj, "savefig"):
+            fig_obj.savefig(path, dpi=150, bbox_inches="tight")
+        else:
+            raise AttributeError("Object has no write_image or savefig")
+        print(f"Saved figure to {path}")
+    except Exception as exc:
+        print(f"Could not save {filename}: {exc}")
+    return path
+```
+
+```python
 # Univariate distributions - key KPIs & drivers
 
 kpi_cols = [
@@ -241,12 +275,13 @@ for i, col in enumerate(kpi_cols):
     sns.boxplot(data=df, x=col, ax=axes[i, 1], color="#e76f51")
     axes[i, 1].set_title(f"Boxplot of {col}")
 plt.tight_layout()
+save_fig(fig, "01_kpi_distributions.png")
 plt.show()
 ```
 
 
     
-![png](output_3_0.png)
+![png](output_4_0.png)
     
 
 
@@ -256,6 +291,7 @@ plt.show()
 level_cols = ["ffpi_food", "ffpi_cereals", "ffpi_veg_oils", "ffpi_meat", "ffpi_dairy", "ffpi_sugar"]
 fig = px.line(df, x="date", y=level_cols, title="FAO food indices over time")
 fig.update_layout(legend_title_text="Index")
+save_fig(fig, "02_ffpi_levels.png")
 fig.show()
 
 # Month-on-month change
@@ -265,6 +301,7 @@ for col in level_cols:
 mom_cols = [f"mom_{c}" for c in level_cols]
 fig = px.line(df, x="date", y=mom_cols, title="MoM % change - FAO indices")
 fig.update_yaxes(title_text="MoM %")
+save_fig(fig, "03_ffpi_mom.png")
 fig.show()
 ```
 
@@ -306,11 +343,13 @@ regime_counts = df.groupby("regime").size().reset_index(name="months")
 regime_counts["regime"] = regime_counts["regime"].astype(str)
 fig = px.bar(regime_counts, x="regime", y="months", title="Months per regime (segment size)")
 fig.update_layout(xaxis_title="Regime", yaxis_title="Number of months")
+save_fig(fig, "04_regime_counts.png")
 fig.show()
 
 missing = df.isna().sum().reset_index(name="missing_rows").rename(columns={"index": "column"})
 fig = px.bar(missing, x="column", y="missing_rows", title="Missing values per column")
 fig.update_layout(xaxis_tickangle=45)
+save_fig(fig, "05_missing_values.png")
 fig.show()
 ```
 
@@ -329,17 +368,20 @@ fig.show()
 
 # Shipping and import prices
 fig = px.line(df, x="date", y=["bdi_price", "ipi_food"], title="Shipping & import price indicators")
+save_fig(fig, "06_shipping_import.png")
 fig.show()
 
 # Climate anomalies
 climate_cols = [c for c in ["gat_land_ocean", "gat_land", "gat_ocean"] if c in df.columns]
 if climate_cols:
     fig = px.line(df, x="date", y=climate_cols, title="Global temperature anomalies")
+    save_fig(fig, "07_climate_anomalies.png")
     fig.show()
 
 # Local retail indicators
 retail_cols = [c for c in ["rs_dairy_products", "rs_fresh", "wpm_fish"] if c in df.columns]
 fig = px.line(df, x="date", y=retail_cols, title="Local retail/wholesale indicators")
+save_fig(fig, "08_retail_indicators.png")
 fig.show()
 ```
 
@@ -357,6 +399,7 @@ outliers = df[df.get("flag_iqr_outlier", False)]
 if not outliers.empty:
     fig.add_scatter(x=outliers["date"], y=outliers["ffpi_food"], mode="markers",
                     marker=dict(color="red", size=9), name="IQR outlier")
+save_fig(fig, "09_ffpi_outliers.png")
 fig.show()
 ```
 

@@ -7530,7 +7530,7 @@ a.anchor-link {
 <div class="highlight hl-python"><pre><span></span><span class="c1"># Ensure plotting deps are available in the current kernel</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span><span class="o">,</span><span class="w"> </span><span class="nn">subprocess</span>
 
-<span class="k">for</span> <span class="n">_pkg</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"matplotlib"</span><span class="p">,</span> <span class="s2">"seaborn"</span><span class="p">,</span> <span class="s2">"plotly"</span><span class="p">):</span>
+<span class="k">for</span> <span class="n">_pkg</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"matplotlib"</span><span class="p">,</span> <span class="s2">"seaborn"</span><span class="p">,</span> <span class="s2">"plotly"</span><span class="p">,</span> <span class="s2">"kaleido"</span><span class="p">):</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="nb">__import__</span><span class="p">(</span><span class="n">_pkg</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ModuleNotFoundError</span><span class="p">:</span>
@@ -7766,6 +7766,49 @@ a.anchor-link {
 </div>
 </div>
 </div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=9073319a">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-python"><pre><span></span><span class="c1"># Figure export helper (PNG)</span>
+<span class="n">export_base_candidates</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"docs"</span> <span class="o">/</span> <span class="s2">"derived"</span><span class="p">,</span>
+    <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"docs"</span> <span class="o">/</span> <span class="s2">"derived"</span><span class="p">,</span>
+    <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"docs"</span> <span class="o">/</span> <span class="s2">"derived"</span><span class="p">,</span>
+    <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"Final Project Repo"</span> <span class="o">/</span> <span class="s2">"docs"</span> <span class="o">/</span> <span class="s2">"derived"</span><span class="p">,</span>
+    <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"Final Project"</span> <span class="o">/</span> <span class="s2">"Final Project Repo"</span> <span class="o">/</span> <span class="s2">"docs"</span> <span class="o">/</span> <span class="s2">"derived"</span><span class="p">,</span>
+    <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"Final Project Repo"</span> <span class="o">/</span> <span class="s2">"docs"</span> <span class="o">/</span> <span class="s2">"derived"</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">export_dir</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">export_base_candidates</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">()),</span> <span class="kc">None</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">export_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">export_dir</span> <span class="o">=</span> <span class="n">export_base_candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">export_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">fig_dir</span> <span class="o">=</span> <span class="n">export_dir</span> <span class="o">/</span> <span class="s2">"02_baseline_eda_figures"</span>
+<span class="n">fig_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">save_fig</span><span class="p">(</span><span class="n">fig_obj</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">fig_dir</span> <span class="o">/</span> <span class="n">filename</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">fig_obj</span><span class="p">,</span> <span class="s2">"write_image"</span><span class="p">):</span>
+            <span class="n">fig_obj</span><span class="o">.</span><span class="n">write_image</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">fig_obj</span><span class="p">,</span> <span class="s2">"savefig"</span><span class="p">):</span>
+            <span class="n">fig_obj</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">"tight"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">"Object has no write_image or savefig"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Saved figure to </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not save </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">path</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=724992f3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7787,6 +7830,7 @@ a.anchor-link {
     <span class="n">sns</span><span class="o">.</span><span class="n">boxplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">col</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s2">"#e76f51"</span><span class="p">)</span>
     <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Boxplot of </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="s2">"01_kpi_distributions.png"</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -7816,6 +7860,7 @@ a.anchor-link {
 <span class="n">level_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"ffpi_food"</span><span class="p">,</span> <span class="s2">"ffpi_cereals"</span><span class="p">,</span> <span class="s2">"ffpi_veg_oils"</span><span class="p">,</span> <span class="s2">"ffpi_meat"</span><span class="p">,</span> <span class="s2">"ffpi_dairy"</span><span class="p">,</span> <span class="s2">"ffpi_sugar"</span><span class="p">]</span>
 <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">level_cols</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"FAO food indices over time"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">legend_title_text</span><span class="o">=</span><span class="s2">"Index"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="s2">"02_ffpi_levels.png"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 
 <span class="c1"># Month-on-month change</span>
@@ -7825,6 +7870,7 @@ a.anchor-link {
 <span class="n">mom_cols</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"mom_</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">level_cols</span><span class="p">]</span>
 <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">mom_cols</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"MoM </span><span class="si">% c</span><span class="s2">hange - FAO indices"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span><span class="n">title_text</span><span class="o">=</span><span class="s2">"MoM %"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="s2">"03_ffpi_mom.png"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -7884,11 +7930,13 @@ The default fill_method='pad' in Series.pct_change is deprecated and will be rem
 <span class="n">regime_counts</span><span class="p">[</span><span class="s2">"regime"</span><span class="p">]</span> <span class="o">=</span> <span class="n">regime_counts</span><span class="p">[</span><span class="s2">"regime"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
 <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">regime_counts</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"regime"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"months"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Months per regime (segment size)"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">xaxis_title</span><span class="o">=</span><span class="s2">"Regime"</span><span class="p">,</span> <span class="n">yaxis_title</span><span class="o">=</span><span class="s2">"Number of months"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="s2">"04_regime_counts.png"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 
 <span class="n">missing</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"missing_rows"</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"index"</span><span class="p">:</span> <span class="s2">"column"</span><span class="p">})</span>
 <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">missing</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"column"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"missing_rows"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Missing values per column"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">xaxis_tickangle</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="s2">"05_missing_values.png"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -7925,17 +7973,20 @@ The default of observed=False is deprecated and will be changed to True in a fut
 
 <span class="c1"># Shipping and import prices</span>
 <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="p">[</span><span class="s2">"bdi_price"</span><span class="p">,</span> <span class="s2">"ipi_food"</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Shipping &amp; import price indicators"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="s2">"06_shipping_import.png"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 
 <span class="c1"># Climate anomalies</span>
 <span class="n">climate_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"gat_land_ocean"</span><span class="p">,</span> <span class="s2">"gat_land"</span><span class="p">,</span> <span class="s2">"gat_ocean"</span><span class="p">]</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
 <span class="k">if</span> <span class="n">climate_cols</span><span class="p">:</span>
     <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">climate_cols</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Global temperature anomalies"</span><span class="p">)</span>
+    <span class="n">save_fig</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="s2">"07_climate_anomalies.png"</span><span class="p">)</span>
     <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 
 <span class="c1"># Local retail indicators</span>
 <span class="n">retail_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"rs_dairy_products"</span><span class="p">,</span> <span class="s2">"rs_fresh"</span><span class="p">,</span> <span class="s2">"wpm_fish"</span><span class="p">]</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
 <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">retail_cols</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Local retail/wholesale indicators"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="s2">"08_retail_indicators.png"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -7968,6 +8019,7 @@ The default of observed=False is deprecated and will be changed to True in a fut
 <span class="k">if</span> <span class="ow">not</span> <span class="n">outliers</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
     <span class="n">fig</span><span class="o">.</span><span class="n">add_scatter</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">outliers</span><span class="p">[</span><span class="s2">"date"</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">outliers</span><span class="p">[</span><span class="s2">"ffpi_food"</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"markers"</span><span class="p">,</span>
                     <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">9</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">"IQR outlier"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="s2">"09_ffpi_outliers.png"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
