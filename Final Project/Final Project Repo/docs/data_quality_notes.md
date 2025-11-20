@@ -1,20 +1,18 @@
-# Data quality notes — Combined dataset
+# Data quality notes – Combined dataset
 
 ## Main data quality risks
-- Dataset spans 96 rows and 19 columns (monthly 2018-01 to 2025-11); one row has a missing `Date` with all indicators empty and should be removed to avoid carrying null-only data.
-- `ffpi_energy_consumption` and `energy_imported` failed to parse and are 100% missing after cleaning (96 nulls each), so they are unusable unless we re-parse the raw strings with more aggressive delimiter stripping.
-- Core FFPI and climate indicators each have 2–4 missing values concentrated in late 2025, so the most recent months are incomplete and should be treated cautiously.
-- `usd_hkd_rate` is constant at 7.8 across the sample and redundant with `ffpi_usd_hkd_rate`.
-- Twelve months are flagged by the IQR outlier detector (mostly 2019–2020 spikes/dips); they are retained but warrant review in analysis.
+- Dataset now spans 95 rows and 20 columns (monthly 2018-01 to 2025-11) after dropping the null-only final row; the latest month (2025-11) is still mostly missing across KPIs.
+- Energy fields (`ffpi_energy_consumption`, `energy_imported`) successfully parse to numeric after removing spaces/commas but each has 2 missing values.
+- Core FFPI and climate indicators each have 1–3 missing values, concentrated in late 2025, so the freshest months remain incomplete.
+- `usd_hkd_rate` is constant at 7.8 and removed; `ffpi_usd_hkd_rate` is retained.
+- Seventeen months are flagged by the IQR outlier detector (kept for transparency); no negative values remain.
 
 ## Confirmed cleaning steps to keep
-- Parse `Date` to monthly datetime (`YYYY-MM-01`) and normalize column names to snake_case (e.g., `ffpi_energy_consumption`, `energy_imported`, `usd_hkd_rate`).
-- Remove thousand separators and stray spaces from numeric strings (e.g., `bdi_price`, energy measures, retail sales) before float conversion.
-- Drop the fully empty final row (missing `Date` and indicators) to maintain a clean 95-month panel.
-- Keep the duplicate check (0 duplicates found) and retain rows while appending `flag_iqr_outlier` and `flag_negative_values` boolean columns for downstream filtering instead of hard deletions.
-- Save the cleaned table to `data/cleaned.csv` for reuse in the baseline EDA and later steps.
+- Parse `Date` to monthly datetime (`YYYY-MM-01`), normalize column names to snake_case, and trim internal whitespace in string fields.
+- Remove commas/spaces from numeric strings (shipping, energy, FX, retail) before float conversion; drop any fully empty rows.
+- Drop columns that are all-null or constant (e.g., `usd_hkd_rate`) while keeping outlier/negative flags instead of deleting rows.
+- Save cleaned outputs to `data/clean/data_clean.parquet` (primary) and `data/clean/data_clean.csv`, with a legacy copy at `data/cleaned.csv` for existing notebooks.
 
 ## Columns to drop or derive for analysis
-- Exclude `usd_hkd_rate` from modeling and visuals because it is constant and redundant.
-- If the energy columns remain all-null after retrying stricter parsing, drop them from analysis; otherwise rerun cleaning to recover numeric values.
-- Derive month/year helper fields from `date` if needed for grouping, and use the flag columns to optionally filter outliers rather than deleting them.
+- `usd_hkd_rate` is already removed; energy columns remain usable after parsing and should be kept.
+- Derive month/year/regime helpers from `date` as needed for grouping, and optionally filter outliers using the flag columns rather than hard deletions.

@@ -1,6 +1,6 @@
 # Baseline EDA code snippets (pandas + matplotlib/plotly)
 
-These cells align with the business brief (monitor food price drivers across shipping, energy, climate, FX and local retail) and the EDA plan. They assume the cleaned monthly panel at `data/cleaned.csv` (2018-01–2025-11) with `date` parsed as a monthly timestamp and outlier flags retained. Energy columns are currently all-null per data quality notes; the code drops them when empty.
+These cells align with the business brief (monitor food price drivers across shipping, energy, climate, FX and local retail) and the EDA plan. They assume the cleaned monthly panel at `data/clean/data_clean.parquet` (CSV fallback `data/cleaned.csv`) with `date` parsed as a monthly timestamp and outlier flags retained. Energy columns now parse to numeric; the code still drops them if they are fully empty.
 
 ```python
 import pandas as pd
@@ -17,12 +17,18 @@ plt.style.use("seaborn-v0_8")
 ## Load and prep
 
 ```python
-DATA_PATH = Path("Final Project/Final Project Repo/data/cleaned.csv")
+parquet_path = Path("Final Project/Final Project Repo/data/clean/data_clean.parquet")
+csv_fallback = Path("Final Project/Final Project Repo/data/cleaned.csv")
 
-df = pd.read_csv(DATA_PATH, parse_dates=["date"])
+if parquet_path.exists():
+    df = pd.read_parquet(parquet_path)
+elif csv_fallback.exists():
+    df = pd.read_csv(csv_fallback, parse_dates=["date"])
+else:
+    raise FileNotFoundError("No cleaned dataset found.")
 
 # Drop constant or all-null columns flagged in data-quality notes
-null_cols = [c for c in ["ffpi_energy_consumption", "energy_imported"] if df[c].isna().all()]
+null_cols = [c for c in ["ffpi_energy_consumption", "energy_imported"] if c in df.columns and df[c].isna().all()]
 const_cols = [c for c in df.columns if df[c].nunique(dropna=False) == 1]
 cols_to_drop = [c for c in null_cols + const_cols if c in df.columns]
 df = df.drop(columns=cols_to_drop)
