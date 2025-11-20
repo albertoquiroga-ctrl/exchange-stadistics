@@ -228,6 +228,15 @@ df.head()
 
 ```python
 # Figure export helper (PNG)
+import sys, subprocess
+from pathlib import Path
+
+# Ensure kaleido is present for plotly static image export
+try:
+    import kaleido  # noqa: F401
+except ModuleNotFoundError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "kaleido"])
+
 export_base_candidates = [
     Path.cwd() / "docs" / "derived",
     Path.cwd().parent / "docs" / "derived",
@@ -249,7 +258,7 @@ def save_fig(fig_obj, filename):
     path = fig_dir / filename
     try:
         if hasattr(fig_obj, "write_image"):
-            fig_obj.write_image(path)
+            fig_obj.write_image(path, engine="kaleido")
         elif hasattr(fig_obj, "savefig"):
             fig_obj.savefig(path, dpi=150, bbox_inches="tight")
         else:

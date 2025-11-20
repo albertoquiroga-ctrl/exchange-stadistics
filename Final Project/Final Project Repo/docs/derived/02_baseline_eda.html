@@ -7774,6 +7774,15 @@ a.anchor-link {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-python"><pre><span></span><span class="c1"># Figure export helper (PNG)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span><span class="o">,</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="c1"># Ensure kaleido is present for plotly static image export</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">kaleido</span>  <span class="c1"># noqa: F401</span>
+<span class="k">except</span> <span class="ne">ModuleNotFoundError</span><span class="p">:</span>
+    <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"pip"</span><span class="p">,</span> <span class="s2">"install"</span><span class="p">,</span> <span class="s2">"kaleido"</span><span class="p">])</span>
+
 <span class="n">export_base_candidates</span> <span class="o">=</span> <span class="p">[</span>
     <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"docs"</span> <span class="o">/</span> <span class="s2">"derived"</span><span class="p">,</span>
     <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"docs"</span> <span class="o">/</span> <span class="s2">"derived"</span><span class="p">,</span>
@@ -7795,7 +7804,7 @@ a.anchor-link {
     <span class="n">path</span> <span class="o">=</span> <span class="n">fig_dir</span> <span class="o">/</span> <span class="n">filename</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">fig_obj</span><span class="p">,</span> <span class="s2">"write_image"</span><span class="p">):</span>
-            <span class="n">fig_obj</span><span class="o">.</span><span class="n">write_image</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="n">fig_obj</span><span class="o">.</span><span class="n">write_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">"kaleido"</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">fig_obj</span><span class="p">,</span> <span class="s2">"savefig"</span><span class="p">):</span>
             <span class="n">fig_obj</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">"tight"</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
