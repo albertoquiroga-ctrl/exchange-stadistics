@@ -1,114 +1,95 @@
-# EDA plan — Insight discovery for food prices, energy, logistics & climate
+# EDA Plan — Food prices, logistics, energy, climate (2018–2025)
 
-## Section 1 — Data audit & cleaning
+1. **Business problem restated**  
+   Build a clean, monthly panel (2018–2025) that links global food price inflation (`ffpi_food`) with shipping costs, energy use/imports, climate anomalies, FX, and local retail/wholesale indicators so policymakers can monitor which drivers dominate in different periods and craft “what-if” scenarios (e.g., freight spikes, energy shocks, climate swings).
 
-**Questions to answer**
+2. **Core KPIs**  
+   - Primary: Level and monthly change of `ffpi_food`.  
+   - Supporting: `ffpi_cereals`, `ffpi_veg_oils`, `ffpi_meat`, `ffpi_dairy`, `ffpi_sugar`, `ipi_food`, `wpm_fish`, `rs_Dairy_Products`, `rs_Fresh`, `bdi_price`, `ffpi_Energy_Consumption`, `Engergy Imported`, `gat_land_ocean` (plus land/ocean splits), `ffpi_USD/HKD_Rate` and (for redundancy check) `USD/HKD Rate`.
 
-1. Do all series cover the same monthly window?  
-2. Are there missing months or entire rows?  
-3. Which columns are stored as strings but should be numeric?  
-4. Are there obvious outliers or regime breaks that look like data errors?
+3. **EDA & insight-discovery plan (in order)**  
+   3.1 **Data audit & cleaning checks**  
+   - Questions:  
+     - Do all indicators share a consistent monthly date key (`YYYY-MM-01`) and window?  
+     - Which columns need type fixes (strings with commas/spaces → numeric)?  
+     - Where are missing months/values; any duplicated months or empty trailing rows?  
+     - Are there obvious unit/scaling issues or outliers that look like data errors?  
+   - Tables/plots:  
+     - Coverage table: start/end date, non-missing count per variable.  
+     - Missingness heatmap by month/variable; duplicate-month check.  
+     - Summary stats (mean, sd, min/max, unique count) by variable.  
+     - Outlier diagnostics (boxplots or z-score flags) per series.  
+   - Decision levers:  
+     - Define common analysis window; decide on forward-fill vs leave-missing.  
+     - Choose variables to drop/retain (e.g., constant `USD/HKD Rate`).  
+     - Flag transformations (comma/space removal, date parsing) and unit notes for documentation.
 
-**Tables / plots**
+   3.2 **Baseline univariate & time-series trends**  
+   - Questions:  
+     - How do levels and month-on-month changes of `ffpi_food` evolve?  
+     - Which FAO sub-indices drive overall volatility, and how do local HK indicators behave?  
+     - Are shipping (BDI), energy, climate, and FX series trending or mean-reverting?  
+   - Tables/plots:  
+     - Line charts for each indicator family; optionally rebased to 2018-01=100.  
+     - MoM and YoY change charts for `ffpi_food` and key drivers.  
+     - Distribution plots (histograms/density) for level and change series.  
+   - Decision levers:  
+     - Identify which series show informative movement vs noise/flatness.  
+     - Highlight time windows/episodes worth deeper focus (e.g., 2020–2022 shocks).  
+     - Determine which change metrics (MoM vs YoY) to report for monitoring.
 
-- Table: row/column counts; coverage start/end per variable.  
-- Table: missing values by variable.  
-- Table: basic summary stats (mean, sd, min, max) for each numeric column.  
-- Diagnostic plot: indicator coverage over time (stacked bars of “non-missing” counts per month).
+   3.3 **Segment/regime comparisons & hypothesis testing**  
+   - Questions:  
+     - How do averages/volatility differ across regimes: 2018–2019, 2020–2022, 2023–2025?  
+     - Are shifts in FFPI mirrored by BDI, energy, climate, or FX changes in each regime?  
+     - Do local HK indicators (`ipi_food`, `wpm_fish`, retail sales) diverge from global FFPI in specific periods?  
+   - Tables/plots:  
+     - Regime summary table (mean, sd) for KPIs and drivers.  
+     - Bar/interval charts of regime means with confidence intervals.  
+     - Line charts with shaded regime bands.  
+     - Simple tests: t-tests or nonparametric comparisons of regime means; variance ratio checks.  
+   - Decision levers:  
+     - Decide whether to frame insights as “shock vs normal” contrasts.  
+     - Prioritize regimes for storytelling and scenario stress points.  
+     - Assess credibility of regime differences before highlighting them.
 
-**Decision levers informed**
+   3.4 **Co-movement, lead–lag, and dependence scan**  
+   - Questions:  
+     - Which drivers co-move most with `ffpi_food` contemporaneously?  
+     - Are there lead–lag effects (e.g., BDI or energy leading FFPI by 1–6 months)?  
+     - Are relationships stable across regimes or concentrated in specific episodes?  
+   - Tables/plots:  
+     - Correlation matrix and pairwise scatterplots (levels and changes).  
+     - Cross-correlation functions for `ffpi_food` vs `bdi_price`, `ipi_food`, `ffpi_Energy_Consumption`.  
+     - Rolling correlation/β plots over time windows.  
+   - Decision levers:  
+     - Select driver variables to feature in monitoring dashboards.  
+     - Choose candidate lead indicators for “early warning” messaging.  
+     - Decide whether climate or FX signals are strong enough to keep.
 
-- Whether to restrict analysis to a common sample window.  
-- Whether to drop the fully missing last row and/or last months for certain indicators.  
-- Whether to drop redundant variables (e.g. `USD/HKD Rate`).
+   3.5 **Stress episodes & anomaly checks (context-specific)**  
+   - Questions:  
+     - What happens around known shocks (COVID onset 2020, supply-chain crunch 2021, energy spikes 2022)?  
+     - Do anomalies coincide with data issues (e.g., sudden zeros from reporting)?  
+     - Are provisional recent months materially different from historical ranges?  
+   - Tables/plots:  
+     - Event-window line charts for key dates/shocks with annotations.  
+     - Outlier flag tables tied to event windows.  
+     - Range comparison of latest 6–12 months vs historical percentiles.  
+   - Decision levers:  
+     - Whether to exclude or footnote anomalous months.  
+     - Which episodes to emphasize in insights and scenarios.  
+     - Guidance on data freshness and provisional caveats.
 
----
-
-## Section 2 — Baseline univariate & time-series analysis
-
-**Questions to answer**
-
-1. How has `ffpi_food` evolved over 2018–2025 (level and volatility)?  
-2. How do the sub-indices (`ffpi_cereals`, `ffpi_veg_oils`, …) differ in level and variability?  
-3. How have shipping (BDI), energy, climate and FX indicators evolved over the same period?
-
-**Tables / plots**
-
-- Line chart: `ffpi_food` over time.  
-- Line chart: FAO sub-indices in one panel (normalized to 2018-01 = 100 if needed).  
-- Line charts: `bdi_price`, `ffpi_Energy_Consumption`, `ipi_food`, `gat_land_ocean`, `ffpi_USD/HKD_Rate`.  
-- Table: summary stats for each series (mean, sd, min, max, count).
-
-**Decision levers informed**
-
-- Which series are most volatile / interesting.  
-- Whether some indicators are flat or redundant (e.g. constant FX series).  
-- Which time windows deserve later emphasis (e.g. 2020–2022 shock).
-
----
-
-## Section 3 — Co-movement and correlation scan
-
-**Questions to answer**
-
-1. How strongly does `ffpi_food` correlate with each driver (BDI, energy, climate, FX, import prices, fish prices)?  
-2. Are there obvious lead–lag patterns (e.g. BDI leading food prices by a few months)?  
-3. Are local HK indicators (`ipi_food`, retail sales, fish prices) more tightly linked to FFPI than climate indices?
-
-**Tables / plots**
-
-- Correlation matrix: `ffpi_food` vs all drivers (contemporaneous).  
-- Optional: cross-correlation plots for `ffpi_food` vs `bdi_price` and `ffpi_food` vs `ipi_food` for small lags (−6 to +6 months).  
-- Scatterplots: FFPI vs BDI; FFPI vs IPI FOOD; FFPI vs temperature anomaly.
-
-**Decision levers informed**
-
-- Prioritization of variables for later visual stories.  
-- Whether to treat climate anomalies as background context vs primary explanatory story.  
-- Whether FX or import prices matter more for FFPI in this sample.
-
----
-
-## Section 4 — Regime / episode comparison
-
-**Questions to answer**
-
-1. How do average FFPI levels differ across regimes:
-   - Pre-COVID (2018–2019)  
-   - COVID & supply-chain stress (2020–2022)  
-   - Recent period (2023–2025)
-2. How do BDI, energy consumption/imports, temperature anomalies and local prices behave across these regimes?  
-3. Are some relationships (e.g. FFPI vs BDI) stronger in specific regimes?
-
-**Tables / plots**
-
-- Table: regime-wise means and standard deviations for FFPI and key drivers.  
-- Bar chart: average FFPI by regime.  
-- Bar chart: average BDI by regime.  
-- Line chart with shaded backgrounds for regimes.
-
-**Decision levers informed**
-
-- Which regime differences are worth turning into “insight stories”.  
-- Whether your final slide should emphasize “shock vs normal times” differences.
-
----
-
-## Section 5 — Candidate insight harvesting
-
-**Questions to answer**
-
-1. Which 6–8 relationships look both non-obvious and actionable (for narrative purposes)?  
-2. Which of those have enough data (no tiny sample segments) to be credible?  
-3. Which 2–3 are strong enough to build a main chart and slide around?
-
-**Tables / plots**
-
-- “Scoreboard” table ranking candidate relationships by:
-  - effect size (difference or correlation),  
-  - data coverage,  
-  - rough stability over time.
-
-**Decision levers informed**
-
-- Selection of the 2–3 **Top_insights_to_pursue** that feed into visual design (Step 2) and chart/slide work.
+   3.6 **Candidate insight harvesting & prioritization**  
+   - Questions:  
+     - Which relationships are strong, non-obvious, and well-supported by data coverage?  
+     - Which 2–3 insights best explain FFPI movements (shipping vs energy vs local factors)?  
+     - Which visuals will be most persuasive for policymakers?  
+   - Tables/plots:  
+     - Scoring table ranking candidate relationships by effect size, stability, and coverage.  
+     - Shortlist chart drafts: top correlations/lead indicators; regime mean contrasts.  
+   - Decision levers:  
+     - Final selection of insight narratives and charts.  
+     - Recommendations for monitoring metrics (what to track monthly).  
+     - Documentation priorities for the clean dataset (notes on variable relevance).
