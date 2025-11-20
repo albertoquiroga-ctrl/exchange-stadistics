@@ -1,55 +1,20 @@
 # Data quality notes — Combined dataset
 
-## Snapshot
+## Main data quality risks
+- Dataset spans 96 rows and 19 columns (monthly 2018-01 to 2025-11); one row has a missing `Date` with all indicators empty and should be removed to avoid carrying null-only data.
+- `ffpi_energy_consumption` and `energy_imported` failed to parse and are 100% missing after cleaning (96 nulls each), so they are unusable unless we re-parse the raw strings with more aggressive delimiter stripping.
+- Core FFPI and climate indicators each have 2–4 missing values concentrated in late 2025, so the most recent months are incomplete and should be treated cautiously.
+- `usd_hkd_rate` is constant at 7.8 across the sample and redundant with `ffpi_usd_hkd_rate`.
+- Twelve months are flagged by the IQR outlier detector (mostly 2019–2020 spikes/dips); they are retained but warrant review in analysis.
 
-- Rows: 96  
-- Columns: 19  
-- Time span:
-  - `Date` non-missing from 2018-01-01 to 2025-10-01.
-  - One row (index 95) has `Date` and all indicators missing.
-- No duplicated rows detected.
+## Confirmed cleaning steps to keep
+- Parse `Date` to monthly datetime (`YYYY-MM-01`) and normalize column names to snake_case (e.g., `ffpi_energy_consumption`, `energy_imported`, `usd_hkd_rate`).
+- Remove thousand separators and stray spaces from numeric strings (e.g., `bdi_price`, energy measures, retail sales) before float conversion.
+- Drop the fully empty final row (missing `Date` and indicators) to maintain a clean 95-month panel.
+- Keep the duplicate check (0 duplicates found) and retain rows while appending `flag_iqr_outlier` and `flag_negative_values` boolean columns for downstream filtering instead of hard deletions.
+- Save the cleaned table to `data/cleaned.csv` for reuse in the baseline EDA and later steps.
 
-## Missingness
-
-- `Date`: 1 missing (final row).
-- Core FFPI indices (`ffpi_*`): 2 missing values each, concentrated in the last months (2025).
-- Climate anomalies (`gat_*`): 4 missing values in late 2025.
-- Energy indicators (`ffpi_Energy_Consumption `, `Engergy Imported `): ~3 missing each, mostly at the tail.
-- FX:
-  - `ffpi_USD/HKD_Rate`: 1 missing towards the end.
-  - `USD/HKD Rate`: no missing but constant at 7.8.
-- Local indicators (`ipi_food`, `rs_Dairy_Products`, `rs_Fresh`, `wpm_fish`): a few missing values in late 2025.
-
-## Structural issues
-
-- `Date` is stored as string `"DD/MM/YYYY"`, not as a proper date.
-- `bdi_price`, `ffpi_Energy_Consumption `, and `Engergy Imported ` are stored as strings with commas or spaces and must be parsed to numeric.
-- Column names include:
-  - Trailing spaces: `ffpi_Energy_Consumption `, `Engergy Imported `.
-  - Typo: `Engergy Imported `.
-  - Slash and space in `USD/HKD Rate`.
-- `USD/HKD Rate` is constant over time (7.8) and seems redundant with `ffpi_USD/HKD_Rate`.
-
-## Cleaning decisions (proposed)
-
-1. **Drop the fully empty last row** (index 95) after confirming it is not a placeholder for future data.
-2. **Parse `Date`** as monthly date (`YYYY-MM-01`) using day-first parsing of the original string.
-3. **Convert string numerics to floats**:
-   - Remove commas and spaces from `bdi_price`, `ffpi_Energy_Consumption `, `Engergy Imported ` before casting to numeric.
-4. **Standardize column names** (either in code or via a mapping):
-   - Strip trailing spaces.
-   - Optionally rename to snake_case (e.g. `energy_consumption_index`, `energy_imports`).
-5. **Common sample window**:
-   - For comparisons and correlations, use the intersection where `ffpi_food` and each driver are both non-missing.
-   - For 2018-01 to 2025-10 you will still have some missing values in certain drivers; decide whether to:
-     - carry NAs through in plots, or
-     - restrict to months where all core variables are present, depending on the analysis.
-6. **Redundant FX variable**:
-   - Keep `ffpi_USD/HKD_Rate` as the main FX indicator.
-   - Either drop `USD/HKD Rate` from analysis or mark it as a constant reference series.
-
-## Risks / caveats
-
-- Latest months (2025) are incomplete for several series and should be treated as provisional.  
-- Differences in original base years and units mean that only *standardized* versions (e.g. z-scores or indexed to a common base) should be visually compared on the same axis.  
-- Climate anomalies have small numeric variation in this period; they may be more useful as context than as main “drivers” in the short sample.
+## Columns to drop or derive for analysis
+- Exclude `usd_hkd_rate` from modeling and visuals because it is constant and redundant.
+- If the energy columns remain all-null after retrying stricter parsing, drop them from analysis; otherwise rerun cleaning to recover numeric values.
+- Derive month/year helper fields from `date` if needed for grouping, and use the flag columns to optionally filter outliers rather than deleting them.
